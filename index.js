@@ -3,12 +3,9 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import cors from 'cors';
+dotenv.config();
+
 import Campaign from './models/Campaign.js';
-
-dotenv.config({ path: './.env' });
-
-const PORT = process.env.PORT || 8000;
-const MONGO_URL = process.env.MONGO_URL;
 
 const app = express();
 app.use(cors());
@@ -22,9 +19,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Connect MongoDB
-mongoose.connect(MONGO_URL)
+/*mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.error('❌ MongoDB Error:', err));
+  .catch(err => console.error('❌ MongoDB Error:', err));*/
+
+  mongoose.connect(process.env.MONGO_URL)
+  .then(() => {
+    console.log('MongoDB connected');
+    app.listen(process.env.PORT || 8000, () => {
+      console.log('Server running on port ' + process.env.PORT);
+    });
+  })
+  .catch(err => console.error(err));
 
 // Create Campaign
 app.post('/api/campaigns', upload.array('creatives'), async (req, res) => {
@@ -73,6 +79,3 @@ app.get('/api/campaigns', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
