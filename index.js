@@ -3,47 +3,36 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import cors from 'cors';
-dotenv.config();
-
 import Campaign from './models/Campaign.js';
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Multer for file uploads
+// ✅ Use /tmp folder for uploads
 const storage = multer.diskStorage({
-  destination: './uploads',
+  destination: '/tmp',
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
 });
 const upload = multer({ storage });
 
-// Connect MongoDB
-/*mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log('✅ MongoDB Connected'))
-  .catch(err => console.error('❌ MongoDB Error:', err));*/
+// ✅ MongoDB Connection (optimized for Vercel)
+let isConnected = false;
+async function connectDB() {
+  if (isConnected) return;
+  await mongoose.connect(process.env.MONGO_URL);
+  isConnected = true;
+  console.log('✅ MongoDB Connected');
+}
+connectDB();
 
-  mongoose.connect(process.env.MONGO_URL)
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(process.env.PORT || 8000, () => {
-      console.log('Server running on port ' + process.env.PORT);
-    });
-  })
-  .catch(err => console.error(err));
-
-// Create Campaign
+// ✅ Routes
 app.post('/api/campaigns', upload.array('creatives'), async (req, res) => {
   try {
-    let channels = [];
-    let segments = [];
-
-    if (req.body.channels) {
-      channels = JSON.parse(req.body.channels);
-    }
-    if (req.body.segments) {
-      segments = JSON.parse(req.body.segments);
-    }
+    const channels = req.body.channels ? JSON.parse(req.body.channels) : [];
+    const segments = req.body.segments ? JSON.parse(req.body.segments) : [];
 
     const campaign = new Campaign({
       campaignName: req.body.campaignName,
@@ -65,11 +54,11 @@ app.post('/api/campaigns', upload.array('creatives'), async (req, res) => {
     await campaign.save();
     res.json({ message: '✅ Campaign saved', campaign });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get Campaigns
 app.get('/api/campaigns', async (req, res) => {
   try {
     const cdata = await Campaign.find();
@@ -79,3 +68,5 @@ app.get('/api/campaigns', async (req, res) => {
   }
 });
 
+// ✅ Export app for Vercel
+export default app;
